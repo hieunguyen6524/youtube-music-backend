@@ -18,6 +18,7 @@ const songSchema = new mongoose.Schema(
     duration: {
       type: Number,
       required: [true, 'A song must have a duration'],
+      min: [1, 'Duration must be at least 1 second'],
     },
     image: {
       type: String,
@@ -38,8 +39,29 @@ const songSchema = new mongoose.Schema(
       min: [0, 'Likes must be above 0'],
     },
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
 const Song = mongoose.model('Song', songSchema);
 module.exports = Song;
+
+songSchema.virtual('formattedDuration').get(function () {
+  if (!this.duration) return '00:00';
+
+  const hours = Math.floor(this.duration / 3600);
+  const minutes = Math.floor((this.duration % 3600) / 60);
+  const seconds = Math.floor(this.duration % 60);
+
+  if (hours > 0) {
+    return [
+      hours.toString().padStart(2, '0'),
+      minutes.toString().padStart(2, '0'),
+      seconds.toString().padStart(2, '0'),
+    ].join(':');
+  }
+
+  return [
+    minutes.toString().padStart(2, '0'),
+    seconds.toString().padStart(2, '0'),
+  ].join(':');
+});
