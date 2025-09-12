@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
+const crypto = require('crypto');
 
 const userSchema = new mongoose.Schema(
   {
@@ -33,6 +34,10 @@ const userSchema = new mongoose.Schema(
         message: 'Password are not the same',
       },
     },
+    isVerified: { type: Boolean, default: false },
+    verificationToken: String,
+    verificationExpires: Date,
+
     passwordChangeAt: Date,
     resetToken: String,
     passwordResetExpires: Date,
@@ -76,6 +81,25 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+userSchema.methods.createToken = function (typeToken) {
+  const token = crypto.randomBytes(32).toString('hex');
+  const hash = crypto.createHash('sha256').update(token).digest('hex');
+
+  if (typeToken !== 'verificationToken' && typeToken !== 'resetToken') {
+    throw new Error('Invalid token type');
+  }
+
+  if (typeToken === 'verificationToken') {
+    this.verificationToken = hash;
+    this.verificationExpires = Date.now() + 24 * 60 * 60 * 1000;
+  } else {
+    this.resetToken = hash;
+    this.passwordResetExpires = Date.now() + 10 * 60 * 1000;
+  }
+
+  return token;
+};
 
 const User = mongoose.model('User', userSchema);
 
